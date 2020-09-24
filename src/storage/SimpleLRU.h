@@ -50,7 +50,7 @@ private:
 
     // Maximum number of bytes could be stored in this cache.
     // i.e all (keys+values) must be less the _max_size
-    std::size_t _max_size;
+    std::size_t _max_size, _temp_size;
 
     // Main storage of lru_nodes, elements in this list ordered descending by "freshness": in the head
     // element that wasn't used for longest time.
