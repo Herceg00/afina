@@ -22,11 +22,14 @@ public:
 
     ~SimpleLRU() {
         _lru_index.clear();
-        while (_lru_tail) {
-            _lru_tail->next.reset(nullptr);
+        if (_lru_tail){
             _lru_tail = _lru_tail->prev;
+            while (_lru_tail){
+                _lru_tail->next.reset();
+                _lru_tail = _lru_tail->prev;
+            }
+            _lru_head.reset();
         }
-        _lru_head.reset();
     }
 
     // Implements Afina::Storage interface
@@ -64,7 +67,7 @@ private:
     //
     // List owns all nodes
     std::unique_ptr<lru_node> _lru_head;
-    lru_node * _lru_tail;
+    lru_node * _lru_tail = nullptr;
     // Index of nodes from list above, allows fast random access to elements by lru_node#key
     std::map<std::reference_wrapper<const std::string>, std::reference_wrapper<lru_node>, std::less<const std::string>> _lru_index;
 };
