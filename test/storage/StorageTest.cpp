@@ -214,11 +214,10 @@ TEST(StorageTest, MaxTest) {
 
         EXPECT_TRUE(val == res);
     }
+    for (long i = 0; i < 100; ++i) {
+        auto key = pad_space("Key " + std::to_string(i), length);
 
-//    for (long i = 0; i < 100; ++i) {
-//        auto key = pad_space("Key " + std::to_string(i), length);
-//
-//        std::string res;
-//        EXPECT_FALSE(storage.Get(key, res));
-//    }
+        std::string res;
+        EXPECT_FALSE(storage.Get(key, res));
+    }
 }

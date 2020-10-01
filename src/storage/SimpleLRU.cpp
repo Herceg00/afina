@@ -30,7 +30,7 @@ bool SimpleLRU::Put(const std::string &key, const std::string &value)
             Delete(key);
         }
         while (income_size + _temp_size > _max_size) {
-            _temp_size -= (_lru_head->value.size() + _lru_head->key.size());
+            //_temp_size -= (_lru_head->value.size() + _lru_head->key.size());
             Delete(_lru_head->key);
         }
     }
