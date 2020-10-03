@@ -57,10 +57,14 @@ private:
         std::unique_ptr<lru_node> next;
     };
 
+    void moveToTail(lru_node&, const std::string);
+
+    void eraseifNeeds(int);
+
     // Maximum number of bytes could be stored in this cache.
     // i.e all (keys+values) must be less the _max_size
     std::size_t _max_size;
-    std::size_t _temp_size = 0;
+    std::size_t _used_size = 0;
 
     // Main storage of lru_nodes, elements in this list ordered descending by "freshness": in the head
     // element that wasn't used for longest time.
