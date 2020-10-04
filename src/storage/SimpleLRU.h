@@ -61,6 +61,8 @@ private:
 
     void eraseifNeeds(int);
 
+    void putToTail(lru_node*);
+
     // Maximum number of bytes could be stored in this cache.
     // i.e all (keys+values) must be less the _max_size
     std::size_t _max_size;
