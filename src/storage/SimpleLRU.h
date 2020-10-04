@@ -57,11 +57,11 @@ private:
         std::unique_ptr<lru_node> next;
     };
 
-    void moveToTail(lru_node&, const std::string);
+    void moveToTail(lru_node&, std::string);
 
     void eraseifNeeds(int);
 
-    void putToTail(lru_node*);
+    void putToTail(const std::string&, const std::string&);
 
     // Maximum number of bytes could be stored in this cache.
     // i.e all (keys+values) must be less the _max_size

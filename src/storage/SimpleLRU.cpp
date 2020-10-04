@@ -7,7 +7,6 @@ namespace Backend {
 // See MapBasedGlobalLockImpl.h
 bool SimpleLRU::Put(const std::string &key, const std::string &value)
 {
-    std::size_t income_size = 0;
     auto iterator = _lru_index.find(key);
     if(key.size() + value.size() > _max_size){
         return false;
@@ -19,11 +18,7 @@ bool SimpleLRU::Put(const std::string &key, const std::string &value)
         eraseifNeeds(delta);
         iterator->second.get().value = value;
     } else {
-        delta = int(key.size()) + int(value.size());
-        auto *new_head = new lru_node(key, value);
-        eraseifNeeds(delta);
-        _lru_index.insert(std::make_pair(std::reference_wrapper<const std::string>(new_head->key),std::reference_wrapper<lru_node>(*new_head)));
-        putToTail(new_head);
+        putToTail(key, value);
     }
     _used_size += delta;
     return true;
@@ -35,12 +30,7 @@ bool SimpleLRU::PutIfAbsent(const std::string &key, const std::string &value) {
     if (iterator != _lru_index.end() || (key.size() + value.size() > _max_size)) {
         return false;
     } else {
-        int income = int(key.size()) + int(value.size());
-        auto *new_head = new lru_node(key, value);
-        eraseifNeeds(income);
-        _lru_index.insert(std::make_pair(std::reference_wrapper<const std::string>(new_head->key),std::reference_wrapper<lru_node>(*new_head)));
-        putToTail(new_head);
-        _used_size += income;
+        putToTail(key,value);
         return true;
     }
 }
@@ -62,12 +52,12 @@ bool SimpleLRU::Set(const std::string &key, const std::string &value) {
 
 // See MapBasedGlobalLockImpl.h
 bool SimpleLRU::Delete(const std::string &key) {
-    auto l = _lru_index.find(key);
-    if (l == _lru_index.end()) {
+    auto iterator = _lru_index.find(key);
+    if (iterator == _lru_index.end()) {
         return false;
     }
 
-     lru_node &deleter = l->second.get();
+     lru_node &deleter = iterator->second.get();
      _used_size -= (key.size() + deleter.value.size()); //Size OK
 
     if (_lru_head->key == key) {
@@ -87,17 +77,17 @@ bool SimpleLRU::Delete(const std::string &key) {
             deleter.prev->next = std::move(deleter.next);
         }
     }
-    _lru_index.erase(l);
+    _lru_index.erase(iterator);
     return true;
 }
 
 // See MapBasedGlobalLockImpl.h
 bool SimpleLRU::Get(const std::string &key, std::string &value) {
-    auto l = _lru_index.find(key);
-    if (l == _lru_index.end()){
+    auto iterator = _lru_index.find(key);
+    if (iterator == _lru_index.end()){
         return false;
     } else {
-        value = l->second.get().value;
+        value = iterator->second.get().value;
         return true;
     }
 }
@@ -125,18 +115,21 @@ void SimpleLRU::eraseifNeeds(int delta) {
     }
 }
 
-void SimpleLRU::putToTail(lru_node* node){
+void SimpleLRU::putToTail(const std::string &key, const std::string &value){
+    int delta = int(key.size()) + int(value.size());
+    auto *new_node = new lru_node(key, value);
+    eraseifNeeds(delta);
+    _lru_index.insert(std::make_pair(std::reference_wrapper<const std::string>(new_node->key),std::reference_wrapper<lru_node>(*new_node)));
+    _used_size += delta;
     if(_lru_head){
-        node->prev = _lru_tail;
-        _lru_tail->next.reset(node);
+        new_node->prev = _lru_tail;
+        _lru_tail->next.reset(new_node);
     } else {
-        node->prev = nullptr;
-        _lru_head.reset(node);
+        new_node->prev = nullptr;
+        _lru_head.reset(new_node);
     }
-    _lru_tail = node;
+    _lru_tail = new_node;
 }
-
-
 
 } // namespace Backend
 } // namespace Afina

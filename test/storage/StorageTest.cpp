@@ -60,18 +60,12 @@ TEST(StorageTest, PutSetGet) {
     SimpleLRU storage;
 
     EXPECT_TRUE(storage.Put("KEY1", "val1"));
-    EXPECT_TRUE(storage.Put("KEY2", "val1"));
     EXPECT_TRUE(storage.Set("KEY1", "val2"));
 
-    EXPECT_TRUE(storage.Set("KEY2", "val2"));
+    EXPECT_FALSE(storage.Set("KEY2", "val2"));
 
     std::string value;
-    EXPECT_TRUE(storage.Get("KEY2", value));
-    EXPECT_TRUE(value == "val2");
-
-    EXPECT_TRUE(storage.Set("KEY1", "val2"));
-
-    EXPECT_TRUE(storage.Get("KEY2", value));
+    EXPECT_TRUE(storage.Get("KEY1", value));
     EXPECT_TRUE(value == "val2");
 }
 
@@ -79,15 +73,11 @@ TEST(StorageTest, SetIfAbsent) {
     SimpleLRU storage;
 
     EXPECT_TRUE(storage.Put("KEY1", "val1"));
-    EXPECT_TRUE(storage.Put("KEY2", "val1"));
 
     std::string value;
-    EXPECT_TRUE(storage.Set("KEY2", "val2"));
+    EXPECT_FALSE(storage.Set("KEY2", "val2"));
     EXPECT_TRUE(storage.Get("KEY1", value));
-
     EXPECT_TRUE(value == "val1");
-    EXPECT_TRUE(storage.Get("KEY2", value));
-    EXPECT_TRUE(value == "val2");
 }
 
 TEST(StorageTest, PutDeleteGet) {
@@ -97,6 +87,7 @@ TEST(StorageTest, PutDeleteGet) {
     EXPECT_TRUE(storage.Put("KEY2", "val2"));
 
     EXPECT_TRUE(storage.Delete("KEY1"));
+
     std::string value;
     EXPECT_FALSE(storage.Get("KEY1", value));
     EXPECT_TRUE(storage.Get("KEY2", value));
@@ -137,34 +128,16 @@ TEST(StorageTest, DeleteHeadAndTailNode)
     EXPECT_TRUE(storage.Put("KEY4", "val4"));
 
 
-    EXPECT_TRUE(storage.Set("KEY3", "val22"));
     EXPECT_TRUE(storage.Set("KEY2", "val22"));
     EXPECT_TRUE(storage.Set("KEY3", "val23"));
     EXPECT_TRUE(storage.Set("KEY1", "val21"));
     EXPECT_TRUE(storage.Set("KEY1", "val31"));
     EXPECT_TRUE(storage.Set("KEY1", "val41"));
-    std::string value;
-    EXPECT_TRUE(storage.Get("KEY2", value));
-    EXPECT_TRUE(value == "val22");
-    EXPECT_TRUE(storage.Get("KEY1", value));
-    EXPECT_TRUE(value == "val41");
-    EXPECT_TRUE(storage.Get("KEY3", value));
-    EXPECT_TRUE(value == "val23");
-//     After that, KEY1 should be first in the rating.
-//     And KEY4 should be the last.
+    // After that, KEY1 should be first in the rating.
+    // And KEY4 should be the last.
     EXPECT_TRUE(storage.Delete("KEY4"));
-    EXPECT_TRUE(storage.Delete("KEY2"));
-    EXPECT_TRUE(storage.Get("KEY1", value));
-    EXPECT_TRUE(value == "val41");
-    EXPECT_TRUE(storage.Get("KEY3", value));
-    EXPECT_TRUE(value == "val23");
-    EXPECT_TRUE(storage.Set("KEY3", "val22"));
-
-    EXPECT_TRUE(storage.Get("KEY3", value));
-    EXPECT_TRUE(value == "val22");
-
+    EXPECT_TRUE(storage.Delete("KEY1"));
 }
-
 
 std::string pad_space(const std::string &s, size_t length) {
     std::string result = s;
@@ -214,6 +187,7 @@ TEST(StorageTest, MaxTest) {
 
         EXPECT_TRUE(val == res);
     }
+
     for (long i = 0; i < 100; ++i) {
         auto key = pad_space("Key " + std::to_string(i), length);
 
