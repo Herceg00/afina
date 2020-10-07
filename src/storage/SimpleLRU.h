@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
 
 #include <afina/Storage.h>
 
@@ -21,7 +22,14 @@ public:
 
     ~SimpleLRU() {
         _lru_index.clear();
-        _lru_head.reset(); // TODO: Here is stack overflow
+        if (_lru_tail){
+            _lru_tail = _lru_tail->prev;
+            while (_lru_tail){
+                _lru_tail->next.reset();
+                _lru_tail = _lru_tail->prev;
+            }
+            _lru_head.reset();
+        }
     }
 
     // Implements Afina::Storage interface
@@ -39,27 +47,41 @@ public:
     // Implements Afina::Storage interface
     bool Get(const std::string &key, std::string &value) override;
 
+
+
 private:
     // LRU cache node
     using lru_node = struct lru_node {
-        std::string key;
+        lru_node(std::string  _key, std::string _value): key(std::move(_key)), value(std::move(_value)), prev(nullptr) {}
+        const std::string key;
         std::string value;
-        std::unique_ptr<lru_node> prev;
+        lru_node* prev;
         std::unique_ptr<lru_node> next;
     };
+
+
 
     // Maximum number of bytes could be stored in this cache.
     // i.e all (keys+values) must be less the _max_size
     std::size_t _max_size;
+    std::size_t _used_size = 0;
 
     // Main storage of lru_nodes, elements in this list ordered descending by "freshness": in the head
     // element that wasn't used for longest time.
     //
     // List owns all nodes
     std::unique_ptr<lru_node> _lru_head;
-
+    lru_node * _lru_tail = nullptr;
     // Index of nodes from list above, allows fast random access to elements by lru_node#key
-    std::map<std::reference_wrapper<std::string>, std::reference_wrapper<lru_node>, std::less<std::string>> _lru_index;
+    std::map<std::reference_wrapper<const std::string>, std::reference_wrapper<lru_node>, std::less<const std::string>> _lru_index;
+
+
+protected:
+    void moveToTail(lru_node&);
+
+    void eraseifNeeds(int);
+
+    bool putToTail(lru_node*);
 };
 
 } // namespace Backend
