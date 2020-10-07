@@ -47,6 +47,8 @@ public:
     // Implements Afina::Storage interface
     bool Get(const std::string &key, std::string &value) override;
 
+
+
 private:
     // LRU cache node
     using lru_node = struct lru_node {
@@ -57,11 +59,7 @@ private:
         std::unique_ptr<lru_node> next;
     };
 
-    void moveToTail(lru_node&, std::string);
 
-    void eraseifNeeds(int);
-
-    void putToTail(const std::string&, const std::string&);
 
     // Maximum number of bytes could be stored in this cache.
     // i.e all (keys+values) must be less the _max_size
@@ -76,6 +74,14 @@ private:
     lru_node * _lru_tail = nullptr;
     // Index of nodes from list above, allows fast random access to elements by lru_node#key
     std::map<std::reference_wrapper<const std::string>, std::reference_wrapper<lru_node>, std::less<const std::string>> _lru_index;
+
+
+protected:
+    void moveToTail(lru_node&);
+
+    void eraseifNeeds(int);
+
+    bool putToTail(lru_node*);
 };
 
 } // namespace Backend

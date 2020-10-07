@@ -7,21 +7,27 @@ namespace Backend {
 // See MapBasedGlobalLockImpl.h
 bool SimpleLRU::Put(const std::string &key, const std::string &value)
 {
-    auto iterator = _lru_index.find(key);
     if(key.size() + value.size() > _max_size){
         return false;
     }
-    int delta = 0;
+
+    auto iterator = _lru_index.find(key);
     if (iterator != _lru_index.end()) {
+        int delta = 0;
         delta = int(iterator->second.get().value.size()) - int(value.size());
-        moveToTail(iterator->second.get(), key);
+        moveToTail(iterator->second.get());
         eraseifNeeds(delta);
         iterator->second.get().value = value;
+        _used_size += delta;
+        return true;
     } else {
-        putToTail(key, value);
+        int delta = int(key.size()) + int(value.size());
+        auto *new_node = new lru_node(key, value);
+        eraseifNeeds(delta);
+        _lru_index.insert(std::make_pair(std::reference_wrapper<const std::string>(new_node->key),std::reference_wrapper<lru_node>(*new_node)));
+        _used_size += delta;
+        return putToTail(new_node);
     }
-    _used_size += delta;
-    return true;
 }
 
 // See MapBasedGlobalLockImpl.h
@@ -30,8 +36,12 @@ bool SimpleLRU::PutIfAbsent(const std::string &key, const std::string &value) {
     if (iterator != _lru_index.end() || (key.size() + value.size() > _max_size)) {
         return false;
     } else {
-        putToTail(key,value);
-        return true;
+        int delta = int(key.size()) + int(value.size());
+        auto *new_node = new lru_node(key, value);
+        eraseifNeeds(delta);
+        _lru_index.insert(std::make_pair(std::reference_wrapper<const std::string>(new_node->key),std::reference_wrapper<lru_node>(*new_node)));
+        _used_size += delta;
+        return putToTail(new_node);
     }
 }
 
@@ -42,7 +52,7 @@ bool SimpleLRU::Set(const std::string &key, const std::string &value) {
         return false;
     } else {
         int delta = int(iterator->second.get().value.size()) - int(value.size());
-        moveToTail(iterator->second.get(), key);
+        moveToTail(iterator->second.get());
         eraseifNeeds(delta);
         iterator->second.get().value = value;
         _used_size += delta;
@@ -92,9 +102,9 @@ bool SimpleLRU::Get(const std::string &key, std::string &value) {
     }
 }
 
-void SimpleLRU::moveToTail(lru_node& node, const std::string key) {
-    if(key != _lru_tail->key){
-        if (key!=_lru_head->key) {
+void SimpleLRU::moveToTail(lru_node& node) {
+    if(node.key != _lru_tail->key){
+        if (node.key !=_lru_head->key) {
             _lru_tail->next = std::move(node.prev->next);
             node.next->prev = node.prev;
             node.prev->next = std::move(node.next);
@@ -115,12 +125,7 @@ void SimpleLRU::eraseifNeeds(int delta) {
     }
 }
 
-void SimpleLRU::putToTail(const std::string &key, const std::string &value){
-    int delta = int(key.size()) + int(value.size());
-    auto *new_node = new lru_node(key, value);
-    eraseifNeeds(delta);
-    _lru_index.insert(std::make_pair(std::reference_wrapper<const std::string>(new_node->key),std::reference_wrapper<lru_node>(*new_node)));
-    _used_size += delta;
+bool SimpleLRU::putToTail(lru_node* new_node){
     if(_lru_head){
         new_node->prev = _lru_tail;
         _lru_tail->next.reset(new_node);
@@ -129,6 +134,7 @@ void SimpleLRU::putToTail(const std::string &key, const std::string &value){
         _lru_head.reset(new_node);
     }
     _lru_tail = new_node;
+    return true;
 }
 
 } // namespace Backend
