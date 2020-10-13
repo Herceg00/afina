@@ -188,7 +188,7 @@ void ServerImpl::client_function(int client_socket) {
         std::unique_lock<std::mutex> _l(_m);
         _socket_set.erase(client_socket);
         close(client_socket);
-        if(_socket_set.empty()){
+        if(_socket_set.empty() && !running){ //No point in notifying server thread(s) which sleeps in Join()
             _cv.notify_all();
         }
     }
@@ -228,7 +228,7 @@ void ServerImpl::OnRun() {
         // Configure read timeout
         {
             struct timeval tv;
-            tv.tv_sec = 5; // TODO: make it configurable
+            tv.tv_sec = 50; // TODO: make it configurable
             tv.tv_usec = 0;
             setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
         }
@@ -237,11 +237,12 @@ void ServerImpl::OnRun() {
             std::unique_lock<std::mutex> l(_m);
             if (_socket_set.size() < THREAD_LIMIT) {
                 _socket_set.insert(client_socket);
-                std::thread(&ServerImpl::client_function, this, client_socket);
+                std::thread working_thread(&ServerImpl::client_function, this, client_socket);
+                working_thread.detach();   //let the thread run independently from the connection-reader thread
             } else {
                 close(client_socket);
             }
-        } //unlock
+        } //scope for lock
     }
 
     // Cleanup on exit...
