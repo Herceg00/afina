@@ -22,36 +22,46 @@ public:
 
     // see SimpleLRU.h
     bool Put(const std::string &key, const std::string &value) override {
-        // TODO: sinchronization
-        return SimpleLRU::Put(key, value);
+        _m.lock();
+        bool answer = SimpleLRU::Put(key, value);
+        _m.unlock();
+        return answer;
     }
 
     // see SimpleLRU.h
     bool PutIfAbsent(const std::string &key, const std::string &value) override {
-        // TODO: sinchronization
-        return SimpleLRU::PutIfAbsent(key, value);
+        _m.lock();
+        bool answer = SimpleLRU::PutIfAbsent(key, value);
+        _m.unlock();
+        return answer;
     }
 
     // see SimpleLRU.h
     bool Set(const std::string &key, const std::string &value) override {
-        // TODO: sinchronization
-        return SimpleLRU::Set(key, value);
+        _m.lock();
+        bool answer = SimpleLRU::Set(key, value);
+        _m.unlock();
+        return answer;
     }
 
     // see SimpleLRU.h
     bool Delete(const std::string &key) override {
-        // TODO: sinchronization
-        return SimpleLRU::Delete(key);
+        _m.lock();
+        bool answer = SimpleLRU::Delete(key);
+        _m.unlock();
+        return answer;
     }
 
     // see SimpleLRU.h
     bool Get(const std::string &key, std::string &value) override {
-        // TODO: sinchronization
-        return SimpleLRU::Get(key, value);
+        _m.lock();
+        bool answer = SimpleLRU::Get(key, value);
+        _m.unlock();
+        return answer;
     }
 
 private:
-    // TODO: sinchronization primitives
+    std::mutex _m;
 };
 
 } // namespace Backend
