@@ -188,7 +188,7 @@ void ServerImpl::client_function(int client_socket) {
         std::unique_lock<std::mutex> _l(_m);
         _socket_set.erase(client_socket);
         close(client_socket);
-        if(_socket_set.empty() && !running){ //No point in notifying server thread(s) which sleeps in Join()
+        if(_socket_set.empty()){
             _cv.notify_all();
         }
     }
