@@ -95,7 +95,7 @@ void ServerImpl::Join() {
     _thread.join();
     close(_server_socket);
     std::unique_lock<std::mutex> l(_m);
-    while(!_socket_set.empty()){
+    while(!_socket_set.empty() && !running){
         _cv.wait(l);
     }
 }
@@ -188,7 +188,7 @@ void ServerImpl::client_function(int client_socket) {
         std::unique_lock<std::mutex> _l(_m);
         _socket_set.erase(client_socket);
         close(client_socket);
-        if(_socket_set.empty()){
+        if(_socket_set.empty() && !running){
             _cv.notify_all();
         }
     }
