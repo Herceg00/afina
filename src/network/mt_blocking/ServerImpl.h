@@ -3,6 +3,8 @@
 
 #include <atomic>
 #include <thread>
+#include <set>
+#include <condition_variable>
 
 #include <afina/network/Server.h>
 
@@ -38,9 +40,14 @@ protected:
      */
     void OnRun();
 
+    void client_function(int client_socket);
+
 private:
     // Logger instance
     std::shared_ptr<spdlog::logger> _logger;
+    std::set<int> _socket_set;
+    std::mutex _m;
+    std::condition_variable _cv;
 
     // Atomic flag to notify threads when it is time to stop. Note that
     // flag must be atomic in order to safely publisj changes cross thread
