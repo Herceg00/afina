@@ -20,9 +20,16 @@ namespace Backend {
 class StripeLockLRU : public SimpleLRU {
 public:
 
-    StripeLockLRU(size_t max_size = 1024, size_t num_banks = 4){
+    StripeLockLRU(size_t max_size = 1024, size_t num_banks = 4) {
+        if (num_banks!=0) {
+            bank_capacity = max_size / num_banks;
+        } else {
+            std::runtime_error("Storage object creation failed");
+        }
+        if(bank_capacity < 256) {
+            std::runtime_error("No point in using stripeLockLRU due to the small size");
+        }
         for (int bank = 0; bank < num_banks; bank++){
-            bank_capacity = max_size/num_banks;
             banks_vector.emplace_back(new ThreadSafeSimplLRU(bank_capacity));
         }
     }
