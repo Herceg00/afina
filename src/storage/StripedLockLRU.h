@@ -66,7 +66,7 @@ private:
 
     std::hash<std::string> hash_func;
     std::size_t bank_capacity;
-    std::vector<std::unique_ptr<Afina::Backend::ThreadSafeSimplLRU>> banks_vector;
+    std::vector<std::shared_ptr<Afina::Backend::ThreadSafeSimplLRU>> banks_vector;
 };
 
 } // namespace Backend
