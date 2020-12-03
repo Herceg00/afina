@@ -20,17 +20,17 @@ namespace Backend {
 class StripeLockLRU : public SimpleLRU {
 public:
 
-    StripeLockLRU(size_t max_size = 1024, size_t num_banks = 4) {
-        if (num_banks!=0) {
-            bank_capacity = max_size / num_banks;
+    static StripeLockLRU* Build_Stripe(size_t max_size = 1024, size_t num_banks = 4) {
+        size_t temp_capacity;
+        if (num_banks != 0) {
+            temp_capacity = max_size / num_banks;
         } else {
-            std::runtime_error("Storage object creation failed");
+            throw std::runtime_error("Storage object creation failed");
         }
-        if(bank_capacity < 256) {
-            std::runtime_error("No point in using stripeLockLRU due to the small size");
-        }
-        for (int bank = 0; bank < num_banks; bank++){
-            banks_vector.emplace_back(new ThreadSafeSimplLRU(bank_capacity));
+        if(temp_capacity < 256) {
+            throw std::runtime_error("No point in using stripeLockLRU due to the small size");
+        } else {
+            return new StripeLockLRU(temp_capacity, num_banks);
         }
     }
 
@@ -57,6 +57,13 @@ public:
     }
 
 private:
+    StripeLockLRU(size_t capacity, size_t num_banks) { //add a private constructor
+        bank_capacity = capacity;
+        for (int bank = 0; bank < num_banks; bank++) {
+            banks_vector.emplace_back(new ThreadSafeSimplLRU(capacity));
+        }
+    }
+
     std::hash<std::string> hash_func;
     std::size_t bank_capacity;
     std::vector<std::unique_ptr<Afina::Backend::ThreadSafeSimplLRU>> banks_vector;
