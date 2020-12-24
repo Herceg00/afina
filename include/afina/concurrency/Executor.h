@@ -8,6 +8,7 @@
 #include <queue>
 #include <string>
 #include <thread>
+#include <chrono>
 
 namespace Afina {
 namespace Concurrency {
@@ -51,7 +52,7 @@ class Executor {
         auto exec = std::bind(std::forward<F>(func), std::forward<Types>(args)...);
 
         std::unique_lock<std::mutex> lock(this->mutex);
-        if (state != State::kRun) {
+        if (state != State::kRun or running_threads >= high_watermark) {
             return false;
         }
 
@@ -97,6 +98,21 @@ private:
      * Flag to stop bg threads
      */
     State state;
+
+    /**
+     * Parameters for thread pool
+     */
+    std::size_t low_watermark = 4;
+    std::size_t high_watermark = 10;
+    std::size_t idle_time = 10;
+    std::size_t max_queue_size = 100;
+
+    std::size_t running_threads = 0;
+
+    std::condition_variable await_cv;
+    std::condition_variable cv1;
+    std::condition_variable cv2; //TODO rename
+
 };
 
 } // namespace Concurrency

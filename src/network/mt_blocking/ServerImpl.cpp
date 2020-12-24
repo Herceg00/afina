@@ -21,6 +21,7 @@
 #include <afina/Storage.h>
 #include <afina/execute/Command.h>
 #include <afina/logging/Service.h>
+#include <afina/concurrency/Executor.h>
 
 #include "protocol/Parser.h"
 
@@ -201,6 +202,7 @@ void ServerImpl::OnRun() {
     // - command_to_execute: last command parsed out of stream
     // - arg_remains: how many bytes to read from stream to get command argument
     // - argument_for_command: buffer stores argument
+    Afina::Concurrency::Executor executor();
     while (running.load()) {
         _logger->debug("waiting for connection...");
 
