@@ -6,18 +6,19 @@ namespace Concurrency {
 
 
 Executor::Executor(std::string name, int size) {
+    max_queue_size = size;
     std::unique_lock<std::mutex> _lock(mutex);
     state = State::kRun;
     for (size_t id = 0; id < low_watermark; id++) {
         //std::thread(perform, this); doesnt work
         running_threads++;
-        std::thread([this]{perform(this);});
+        std::thread([this]{perform(this, false);});
     }
 }
 
 Executor::~Executor() {
     if (state == State::kRun) {
-        bool await = false;
+        bool await = true;
         Stop(await);
     }
 }
@@ -39,19 +40,18 @@ void Executor::Stop(bool await) {
 }
 
 
-void perform(Executor *executor) {
+void perform(Executor *executor, bool has_personal_task) {
+
     std::unique_lock<std::mutex> lock(executor->mutex);
     while (executor->state == Executor::State::kRun) {
-        if (executor->tasks.empty()) {
-            if (executor->empty_condition.wait_for(lock, std::chrono::microseconds(100)) == std::cv_status::timeout) {
+        if (executor->tasks.empty() && !has_personal_task) {
+            if (executor->empty_condition.wait_for(lock, std::chrono::milliseconds(executor->idle_time)) == std::cv_status::timeout) {
                 if (executor->running_threads > executor->low_watermark) {
-                    executor->running_threads -= 1;
                     break;
                 }
                 else {
                     executor->empty_condition.wait(lock);
                     if (executor->state != Executor::State::kRun) {
-                        executor->running_threads -= 1;
                         break;
                     }
                 }
@@ -59,7 +59,25 @@ void perform(Executor *executor) {
         }
 
         //Pop task from the queue
+        auto task = executor->tasks.front();
+        executor->tasks.pop_front();
+        executor->busy_threads++;
 
+        /* Perform a task*/
+        lock.unlock();
+        task();
+        has_personal_task = false;
+        lock.lock();
+
+        executor->busy_threads--;
+
+        if (executor->state != Executor::State::kRun) {
+            break;
+        }
+    }
+    executor->running_threads--;
+    if (executor->running_threads == 0){
+        executor->await_cv.notify_one();
     }
 }
 

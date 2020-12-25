@@ -17,6 +17,7 @@ namespace Concurrency {
  * # Thread pool
  */
 class Executor {
+public:
     enum class State {
         // Threadpool is fully operational, tasks could be added and get executed
         kRun,
@@ -52,13 +53,18 @@ class Executor {
         auto exec = std::bind(std::forward<F>(func), std::forward<Types>(args)...);
 
         std::unique_lock<std::mutex> lock(this->mutex);
-        if (state != State::kRun or running_threads >= high_watermark) {
+        if (state != State::kRun or running_threads == high_watermark or tasks.size() == max_queue_size) {
             return false;
         }
 
-        // Enqueue new task
         tasks.push_back(exec);
-        empty_condition.notify_one();
+
+        if (busy_threads == running_threads) {
+            std::thread([this]{perform(this, true);});
+            running_threads++;
+        } else {
+            empty_condition.notify_one();
+        }
         return true;
     }
 
@@ -71,8 +77,10 @@ private:
 
     /**
      * Main function that all pool threads are running. It polls internal task queue and execute tasks
+     * Bool value has_personal_task is true, when Execute() method adds new thread to pool
+     * A thread with this value equal true
      */
-    friend void perform(Executor *executor);
+    friend void perform(Executor *executor, bool has_personal_task);
 
     /**
      * Mutex to protect state below from concurrent modification
@@ -107,12 +115,13 @@ private:
     std::size_t idle_time = 10;
     std::size_t max_queue_size = 100;
 
+    /* Threads in perform() function */
     std::size_t running_threads = 0;
 
-    std::condition_variable await_cv;
-    std::condition_variable cv1;
-    std::condition_variable cv2; //TODO rename
+    /* Threads running a task */
+    std::size_t busy_threads = 0;
 
+    std::condition_variable await_cv;
 };
 
 } // namespace Concurrency

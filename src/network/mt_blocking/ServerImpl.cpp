@@ -202,7 +202,7 @@ void ServerImpl::OnRun() {
     // - command_to_execute: last command parsed out of stream
     // - arg_remains: how many bytes to read from stream to get command argument
     // - argument_for_command: buffer stores argument
-    Afina::Concurrency::Executor executor();
+    Concurrency::Executor executor("???", 1000);
     while (running.load()) {
         _logger->debug("waiting for connection...");
 
@@ -239,8 +239,9 @@ void ServerImpl::OnRun() {
             std::unique_lock<std::mutex> l(_m);
             if (_socket_set.size() < THREAD_LIMIT) {
                 _socket_set.insert(client_socket);
-                std::thread working_thread(&ServerImpl::client_function, this, client_socket);
-                working_thread.detach();   //let the thread run independently from the connection-reader thread
+                executor.Execute(&ServerImpl::client_function, this, client_socket);
+//                std::thread working_thread(&ServerImpl::client_function, this, client_socket);
+//                working_thread.detach();   //let the thread run independently from the connection-reader thread
             } else {
                 close(client_socket);
             }
