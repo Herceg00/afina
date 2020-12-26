@@ -40,11 +40,10 @@ void Executor::Stop(bool await) {
 }
 
 
-void perform(Executor *executor, bool has_personal_task) {
-
+void perform(Executor *executor) {
     std::unique_lock<std::mutex> lock(executor->mutex);
     while (executor->state == Executor::State::kRun) {
-        if (executor->tasks.empty() && !has_personal_task) {
+        if (executor->tasks.empty()) {
             if (executor->empty_condition.wait_for(lock, std::chrono::milliseconds(executor->idle_time)) == std::cv_status::timeout) {
                 if (executor->running_threads > executor->low_watermark) {
                     break;
@@ -58,6 +57,7 @@ void perform(Executor *executor, bool has_personal_task) {
             }
         }
 
+
         //Pop task from the queue
         auto task = executor->tasks.front();
         executor->tasks.pop_front();
@@ -66,10 +66,10 @@ void perform(Executor *executor, bool has_personal_task) {
         /* Perform a task*/
         lock.unlock();
         task();
-        has_personal_task = false;
         lock.lock();
 
         executor->busy_threads--;
+
 
         if (executor->state != Executor::State::kRun) {
             break;

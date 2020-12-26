@@ -60,7 +60,7 @@ public:
         tasks.push_back(exec);
 
         if (busy_threads == running_threads) {
-            std::thread([this]{perform(this, true);});
+            std::thread([this]{perform(this);});
             running_threads++;
         } else {
             empty_condition.notify_one();
@@ -80,7 +80,7 @@ private:
      * Bool value has_personal_task is true, when Execute() method adds new thread to pool
      * A thread with this value equal true
      */
-    friend void perform(Executor *executor, bool has_personal_task);
+    friend void perform(Executor *executor);
 
     /**
      * Mutex to protect state below from concurrent modification
