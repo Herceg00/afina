@@ -14,34 +14,35 @@ namespace MTnonblock {
 void Connection::Start() {
     std::cout << "Start" << std::endl;
     _event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
+    alive = true;
 }
 
 // See Connection.h
 void Connection::OnError() {
-    std::cout << "OnError" << std::endl;
     std::unique_lock<std::mutex> lock(_mutex);
+    std::cout << "OnError" << std::endl;
     alive = false;
     _logger -> warn("error on {} scoket", _socket);
 }
 
 // See Connection.h
 void Connection::OnClose() {
-    std::cout << "OnClose" << std::endl;
     std::unique_lock<std::mutex> lock(_mutex);
+    std::cout << "OnClose" << std::endl;
     alive = false;
 }
 
 // See Connection.h
 void Connection::DoRead() {
-    std::cout << "DoRead" << std::endl;
     std::unique_lock<std::mutex> lock(_mutex);
+    std::cout << "DoRead" << std::endl;
     try {
         int readed_bytes = -1;
         while ((readed_bytes = read(_socket, client_buffer + total_offset, sizeof(client_buffer) - total_offset)) > 0) {
             _logger->debug("Got {} bytes from socket", readed_bytes);
             total_offset += readed_bytes;
 
-            while (readed_bytes > 0) {
+            while (total_offset > 0) {
                 _logger->debug("Process {} bytes", readed_bytes);
                 // There is no command yet
                 if (!command_to_execute) {
@@ -62,7 +63,7 @@ void Connection::DoRead() {
                         break;
                     } else {
                         std::memmove(client_buffer, client_buffer + parsed, total_offset - parsed);
-                        readed_bytes -= parsed;
+                        total_offset -= parsed;
                     }
                 }
 
@@ -73,7 +74,7 @@ void Connection::DoRead() {
                     std::size_t to_read = std::min(arg_remains, std::size_t(total_offset));
                     argument_for_command.append(client_buffer, to_read);
 
-                    std::memmove(client_buffer, client_buffer + to_read, readed_bytes - to_read);
+                    std::memmove(client_buffer, client_buffer + to_read, total_offset - to_read);
                     arg_remains -= to_read;
                     total_offset -= to_read;
                 }
