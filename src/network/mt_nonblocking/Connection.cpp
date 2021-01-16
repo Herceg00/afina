@@ -12,7 +12,7 @@ namespace MTnonblock {
 
 // See Connection.h
 void Connection::Start() {
-    std::cout << "Start" << std::endl;
+    std::unique_lock<std::mutex> lock(_mutex);
     _event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
     alive = true;
 }
@@ -20,7 +20,6 @@ void Connection::Start() {
 // See Connection.h
 void Connection::OnError() {
     std::unique_lock<std::mutex> lock(_mutex);
-    std::cout << "OnError" << std::endl;
     alive = false;
     _logger -> warn("error on {} scoket", _socket);
 }
@@ -28,14 +27,14 @@ void Connection::OnError() {
 // See Connection.h
 void Connection::OnClose() {
     std::unique_lock<std::mutex> lock(_mutex);
-    std::cout << "OnClose" << std::endl;
     alive = false;
+    _logger -> debug("closing socket {}", _socket);
 }
 
 // See Connection.h
 void Connection::DoRead() {
     std::unique_lock<std::mutex> lock(_mutex);
-    std::cout << "DoRead" << std::endl;
+    _logger->debug("Read on {} ",_socket);
     try {
         int readed_bytes = -1;
         while ((readed_bytes = read(_socket, client_buffer + total_offset, sizeof(client_buffer) - total_offset)) > 0) {
@@ -123,7 +122,7 @@ void Connection::DoRead() {
 
 // See Connection.h
 void Connection::DoWrite() {
-    std::cout << "DoWrite" << std::endl;
+    _logger->debug("Write on {} ",_socket);
     std::unique_lock<std::mutex> lock(_mutex);
     int ret;
     auto it = response_queue.begin();
@@ -146,18 +145,13 @@ void Connection::DoWrite() {
         alive = false;
     }
 
-    uint32_t new_event = 0;
-
+    //maybe sufficient....
     if (response_queue.size() < queue_size) {
-        new_event |= EPOLLIN;
+        _event.events |= EPOLLIN;
     }
 
-    if (!response_queue.empty()) {
-        new_event |= EPOLLOUT;
-    }
-
-    if (_event.events != new_event) {
-        _event.events = new_event;
+    if (response_queue.empty()) {
+        _event.events &= ~EPOLLOUT;
     }
 }
 }
